@@ -177,13 +177,14 @@ main {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 3000;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .header-image {
   display: block;
   max-width: 550px;
   height: auto;
+  pointer-events: none;
 }
 
 .projectile-glow {
@@ -199,4 +200,26 @@ main {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   font-family: 'Arial Black', Gadget, sans-serif;
   z-index: 999;
+}
+
+/* Add this to the end of the file */
+.ecs-toggle {
+  display: inline-block;
+  margin-left: 20px;
+  padding: 5px 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 5px;
+  color: white;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.ecs-toggle label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.ecs-toggle input {
+  margin-right: 6px;
 }
