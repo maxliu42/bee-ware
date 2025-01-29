@@ -9,7 +9,7 @@ import './components/background/OrbAnimations.css';
 
 const App: React.FC = () => {
   // State to toggle between original and ECS implementations
-  const [useECS, setUseECS] = useState(false);
+  const [useECS, setUseECS] = useState(true);
   
   // Handler for checkbox change
   const handleToggleECS = (e: React.ChangeEvent<HTMLInputElement>) => {

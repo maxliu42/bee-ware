@@ -9,7 +9,9 @@ import {
   AISystem,
   SpawnSystem,
   CollisionSystem,
-  ProjectileSystem
+  ProjectileSystem,
+  ScoreSystem,
+  GameStateSystem
 } from '../systems';
 import { ATTACK_RATE } from '../../constants';
 
@@ -27,7 +29,9 @@ export const useECS = (isPaused: boolean = false) => {
     ai: null as AISystem | null,
     spawn: null as SpawnSystem | null,
     collision: null as CollisionSystem | null,
-    projectile: null as ProjectileSystem | null
+    projectile: null as ProjectileSystem | null,
+    score: null as ScoreSystem | null,
+    gameState: null as GameStateSystem | null
   });
   
   // State to track render data
@@ -35,9 +39,6 @@ export const useECS = (isPaused: boolean = false) => {
   
   // State to track if systems are initialized
   const [isInitialized, setIsInitialized] = useState(false);
-  
-  // State to track score
-  const [score, setScore] = useState(0);
   
   // Set up the ECS world and systems
   useEffect(() => {
@@ -62,8 +63,12 @@ export const useECS = (isPaused: boolean = false) => {
     const collisionSystem = new CollisionSystem();
     const projectileSystem = new ProjectileSystem(factory);
     const spawnSystem = new SpawnSystem(factory);
+    const scoreSystem = new ScoreSystem();
+    const gameStateSystem = new GameStateSystem();
     
     // Add systems to the world
+    world.addSystem(gameStateSystem); // Add first (highest priority)
+    world.addSystem(scoreSystem);
     world.addSystem(inputSystem);
     world.addSystem(movementSystem);
     world.addSystem(aiSystem);
@@ -80,12 +85,16 @@ export const useECS = (isPaused: boolean = false) => {
       ai: aiSystem,
       spawn: spawnSystem,
       collision: collisionSystem,
-      projectile: projectileSystem
+      projectile: projectileSystem,
+      score: scoreSystem,
+      gameState: gameStateSystem
     };
     
     // Initialize systems
     inputSystem.initialize();
     spawnSystem.initialize();
+    scoreSystem.initialize();
+    gameStateSystem.initialize();
     
     // Create player entity
     const player = factory.createPlayer();
@@ -118,8 +127,10 @@ export const useECS = (isPaused: boolean = false) => {
   useEffect(() => {
     if (!isInitialized || !worldRef.current) return;
     
-    // Set pause state
-    worldRef.current.setPaused(isPaused);
+    // Set pause state via GameStateSystem
+    if (systemsRef.current.gameState) {
+      systemsRef.current.gameState.setPaused(isPaused);
+    }
     
     let lastTime = performance.now();
     let frameId: number;
@@ -154,12 +165,19 @@ export const useECS = (isPaused: boolean = false) => {
     };
   }, [isInitialized, isPaused]);
   
+  // Get state from systems
+  const score = systemsRef.current.score?.getScore() || 0;
+  const isGameOver = systemsRef.current.gameState?.isGameOver() || false;
+  const showLevelUp = systemsRef.current.gameState?.isShowingLevelUp() || false;
+  
   // Provide factory and render data to consumers
   return {
     world: worldRef.current,
     factory: factoryRef.current,
     renderData,
     score,
+    isGameOver,
+    showLevelUp,
     isInitialized,
   };
 }; 

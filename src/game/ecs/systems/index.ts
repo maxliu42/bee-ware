@@ -6,4 +6,6 @@ export * from './RenderSystem';
 export * from './AISystem';
 export * from './SpawnSystem';
 export * from './CollisionSystem';
-export * from './ProjectileSystem'; 
+export * from './ProjectileSystem';
+export * from './ScoreSystem';
+export * from './GameStateSystem'; 

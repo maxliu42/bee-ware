@@ -9,4 +9,5 @@ export * from './ProjectileComponent';
 export * from './TagComponent';
 export * from './InputComponent';
 export * from './AIComponent';
-export * from './TimerComponent'; 
+export * from './TimerComponent';
+export * from './GameStateComponent'; 

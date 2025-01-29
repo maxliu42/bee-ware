@@ -31,6 +31,7 @@ export const ComponentTypes = {
   PROJECTILE: 'projectile',
   TAG: 'tag',
   TIMER: 'timer',
+  GAME_STATE: 'gameState',
 } as const;
 
 /**

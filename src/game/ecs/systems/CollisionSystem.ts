@@ -6,6 +6,7 @@ import { ColliderComponent, ColliderType, checkCollision } from '../components/C
 import { TagComponent, EntityTags } from '../components/TagComponent';
 import { HealthComponent, applyDamage, isDead } from '../components/HealthComponent';
 import { ProjectileComponent, decrementPierce } from '../components/ProjectileComponent';
+import { ScoreSystem } from './ScoreSystem';
 
 /**
  * CollisionEvent - Represents a collision between two entities
@@ -158,7 +159,13 @@ export class CollisionSystem extends BaseSystem {
       // Mark enemy for removal
       this.world.removeEntity(enemyEntity.getId());
       
-      // Add score or other effects here
+      // Add score using the ScoreSystem
+      if (this.world) {
+        const scoreSystem = this.world.getSystem(ScoreSystem);
+        if (scoreSystem) {
+          scoreSystem.incrementScore();
+        }
+      }
     }
     
     // Decrement projectile pierce count

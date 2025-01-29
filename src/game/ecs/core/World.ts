@@ -117,4 +117,19 @@ export class World {
   public getEntityManager(): EntityManager {
     return this.entityManager;
   }
+
+  /**
+   * Get all systems in the world
+   */
+  public getSystems(): System[] {
+    return [...this.systems];
+  }
+  
+  /**
+   * Get a system by its type
+   * @param SystemType The constructor of the system to get
+   */
+  public getSystem<T extends System>(SystemType: new (...args: any[]) => T): T | undefined {
+    return this.systems.find(system => system instanceof SystemType) as T | undefined;
+  }
 } 
