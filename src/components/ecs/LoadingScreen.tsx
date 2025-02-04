@@ -1,28 +1,28 @@
 import React from 'react';
 import { Layer, Rect, Stage, Text } from 'react-konva';
-import { GAME_HEIGHT, GAME_WIDTH } from '../../game/constants';
+import { STAGE_WIDTH, STAGE_HEIGHT } from '../../game/constants';
 
 /**
  * LoadingScreen component - Displays while the ECS is initializing
  */
 const LoadingScreen: React.FC = () => {
   return (
-    <Stage width={GAME_WIDTH} height={GAME_HEIGHT}>
+    <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
       <Layer>
         {/* Background */}
         <Rect
           x={0}
           y={0}
-          width={GAME_WIDTH}
-          height={GAME_HEIGHT}
+          width={STAGE_WIDTH}
+          height={STAGE_HEIGHT}
           fill="#000"
           opacity={0.8}
         />
         
         {/* Loading message */}
         <Text
-          x={GAME_WIDTH / 2}
-          y={GAME_HEIGHT / 2}
+          x={STAGE_WIDTH / 2}
+          y={STAGE_HEIGHT / 2}
           text="Loading Bee-Ware ECS Edition..."
           fontSize={24}
           fontFamily="Arial"
@@ -34,8 +34,8 @@ const LoadingScreen: React.FC = () => {
         
         {/* Loading hint */}
         <Text
-          x={GAME_WIDTH / 2}
-          y={GAME_HEIGHT / 2 + 40}
+          x={STAGE_WIDTH / 2}
+          y={STAGE_HEIGHT / 2 + 40}
           text="The bees are getting organized..."
           fontSize={16}
           fontFamily="Arial"

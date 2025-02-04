@@ -4,19 +4,40 @@ import { ComponentTypes } from '../core/Component';
 import { TimerComponent, updateTimer, resetTimer } from '../components/TimerComponent';
 import { TransformComponent, getTransformCenter } from '../components/TransformComponent';
 import { TagComponent, EntityTags } from '../components/TagComponent';
-import { EntityFactory } from '../factories/EntityFactory';
-import { PLAYER_SIZE, PROJECTILE_SIZE } from '../../constants';
+import { 
+  createProjectileComponent, 
+  createTransformComponent,
+  createVelocityComponent,
+  createRenderComponent,
+  createColliderComponent,
+  createTagComponent,
+  RenderType,
+  ColliderType
+} from '../components';
+import {PROJECTILE_SIZE, PROJECTILE_SPEED, PROJECTILE_DAMAGE, DEFAULT_PIERCE } from '../../constants';
 
 /**
  * ProjectileSystem - Handles projectile generation for entities
  */
 export class ProjectileSystem extends BaseSystem {
-  private factory: EntityFactory;
   
-  constructor(factory: EntityFactory) {
+  constructor() {
     // This system requires TimerComponent and Transform
     super([ComponentTypes.TIMER, ComponentTypes.TRANSFORM, ComponentTypes.TAG], 6); // Priority 6
-    this.factory = factory;
+  }
+  
+  /**
+   * Initialize the projectile system
+   */
+  public initialize(): void {
+    // Nothing to initialize
+  }
+  
+  /**
+   * Clean up the projectile system
+   */
+  public cleanup(): void {
+    // Nothing to clean up
   }
   
   /**
@@ -86,13 +107,36 @@ export class ProjectileSystem extends BaseSystem {
     const directionX = Math.cos(angle);
     const directionY = Math.sin(angle);
     
-    // Create projectile entity
-    this.factory.createProjectile(
-      projectileX,
-      projectileY,
-      directionX,
-      directionY,
-      entity.getId()
+    // Create projectile entity directly rather than using a factory
+    const projectile = this.world.createEntity();
+    
+    // Add components
+    projectile.addComponent(ComponentTypes.TRANSFORM, 
+      createTransformComponent(projectileX, projectileY, PROJECTILE_SIZE, PROJECTILE_SIZE)
+    );
+    projectile.addComponent(ComponentTypes.VELOCITY, 
+      createVelocityComponent(directionX, directionY, PROJECTILE_SPEED)
+    );
+    projectile.addComponent(ComponentTypes.RENDER, 
+      createRenderComponent(RenderType.PROJECTILE, 3)
+    );
+    projectile.addComponent(ComponentTypes.COLLIDER, 
+      createColliderComponent(
+        ColliderType.PROJECTILE,
+        PROJECTILE_SIZE,
+        PROJECTILE_SIZE,
+        true // Is trigger (doesn't block movement)
+      )
+    );
+    projectile.addComponent(ComponentTypes.TAG, 
+      createTagComponent(EntityTags.PROJECTILE)
+    );
+    projectile.addComponent(ComponentTypes.PROJECTILE, 
+      createProjectileComponent(
+        PROJECTILE_DAMAGE,
+        DEFAULT_PIERCE,
+        entity.getId()
+      )
     );
   }
 } 

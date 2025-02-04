@@ -1,59 +1,104 @@
-import React from 'react';
-import { Group } from 'react-konva';
-import { RenderData } from '../../game/ecs/systems/RenderSystem';
-import { RenderType } from '../../game/ecs/components/RenderComponent';
+import { memo } from 'react';
+import { Group, Circle } from 'react-konva';
+import { CategorizedRenderData, RenderData } from '../../game/ecs/systems/RenderSystem';
 import PlayerRenderer from './PlayerRenderer';
 import EnemyRenderer from './EnemyRenderer';
 import ProjectileRenderer from './ProjectileRenderer';
 
 interface EntityRendererProps {
-  renderData: RenderData[];
+  renderData: CategorizedRenderData;
 }
 
 /**
- * EntityRenderer - Renders all entities from the ECS
+ * Generic renderer for 'other' entity types
  */
-const EntityRenderer: React.FC<EntityRendererProps> = ({ renderData }) => {
-  // Filter entities by render type
-  const playerEntities = renderData.filter(
-    entity => entity.renderType === RenderType.PLAYER
-  );
+const GenericEntityRenderer = memo(({ entityData }: { entityData: RenderData }) => {
+  const { x, y, width, height, color = '#ffffff' } = entityData;
   
-  const enemyEntities = renderData.filter(
-    entity => entity.renderType === RenderType.ENEMY
-  );
+  // Calculate center coordinates
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
   
-  const projectileEntities = renderData.filter(
-    entity => entity.renderType === RenderType.PROJECTILE
+  return (
+    <Circle
+      x={centerX}
+      y={centerY}
+      radius={width / 2}
+      fill={color || '#ffffff'}
+    />
   );
+});
+
+/**
+ * Memoized category renderers to prevent unnecessary re-renders
+ */
+const PlayersCategoryRenderer = memo(({ players }: { players: RenderData[] }) => (
+  <>
+    {players.map(playerData => (
+      <PlayerRenderer 
+        key={playerData.id} 
+        playerData={playerData} 
+      />
+    ))}
+  </>
+));
+
+const EnemiesCategoryRenderer = memo(({ enemies }: { enemies: RenderData[] }) => (
+  <>
+    {enemies.map(enemyData => (
+      <EnemyRenderer 
+        key={enemyData.id} 
+        enemyData={enemyData} 
+      />
+    ))}
+  </>
+));
+
+const ProjectilesCategoryRenderer = memo(({ projectiles }: { projectiles: RenderData[] }) => (
+  <>
+    {projectiles.map(projectileData => (
+      <ProjectileRenderer 
+        key={projectileData.id} 
+        projectileData={projectileData} 
+      />
+    ))}
+  </>
+));
+
+const OtherCategoryRenderer = memo(({ other }: { other: RenderData[] }) => (
+  <>
+    {other.map(entityData => (
+      <GenericEntityRenderer
+        key={entityData.id}
+        entityData={entityData}
+      />
+    ))}
+  </>
+));
+
+/**
+ * EntityRenderer - Renders all entities from the ECS
+ * Uses pre-categorized data for improved performance
+ */
+const EntityRenderer = memo(({ renderData }: EntityRendererProps) => {
+  // Destructure the pre-categorized render data
+  const { players, enemies, projectiles, other } = renderData;
   
   return (
     <Group>
       {/* Render projectiles (drawn first, bottom layer) */}
-      {projectileEntities.map(projectileData => (
-        <ProjectileRenderer 
-          key={projectileData.id} 
-          projectileData={projectileData} 
-        />
-      ))}
+      <ProjectilesCategoryRenderer projectiles={projectiles} />
       
       {/* Render enemies (middle layer) */}
-      {enemyEntities.map(enemyData => (
-        <EnemyRenderer 
-          key={enemyData.id} 
-          enemyData={enemyData} 
-        />
-      ))}
+      <EnemiesCategoryRenderer enemies={enemies} />
       
       {/* Render player entities (top layer) */}
-      {playerEntities.map(playerData => (
-        <PlayerRenderer 
-          key={playerData.id} 
-          playerData={playerData} 
-        />
-      ))}
+      <PlayersCategoryRenderer players={players} />
+      
+      {/* Render other entities */}
+      <OtherCategoryRenderer other={other} />
     </Group>
   );
-};
+});
 
 export default EntityRenderer; 

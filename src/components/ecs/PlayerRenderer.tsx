@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo, useMemo } from 'react';
 import { Group, Circle, Line } from 'react-konva';
 import { RenderData } from '../../game/ecs/systems/RenderSystem';
 import HealthBar from '../ui/HealthBar';
@@ -10,15 +10,15 @@ interface PlayerRendererProps {
 /**
  * PlayerRenderer - Renders a player entity using Konva
  */
-const PlayerRenderer: React.FC<PlayerRendererProps> = ({ playerData }) => {
+const PlayerRenderer = memo(({ playerData }: PlayerRendererProps) => {
   const { x, y, width, height, health } = playerData;
   
   // Calculate center coordinates
   const centerX = x + width / 2;
   const centerY = y + height / 2;
   
-  // Generate line points helper function
-  const generateRelativeLine = (
+  // Generate line points helper function - Memoize this function to avoid recreating it every render
+  const generateRelativeLine = useMemo(() => (
     centerX: number, 
     centerY: number,
     relStartX: number, 
@@ -32,7 +32,32 @@ const PlayerRenderer: React.FC<PlayerRendererProps> = ({ playerData }) => {
       centerX + relEndX,
       centerY + relEndY
     ];
-  };
+  }, []);
+  
+  // Pre-compute stripe and stinger points to avoid recalculating during render
+  const topStripePoints = useMemo(() => 
+    generateRelativeLine(
+      centerX, centerY,
+      -width/2, -height/5,
+      width/2, -height/5
+    ), 
+  [centerX, centerY, width, height, generateRelativeLine]);
+  
+  const middleStripePoints = useMemo(() => 
+    generateRelativeLine(
+      centerX, centerY,
+      -width/2, height/8,
+      width/2, height/8
+    ),
+  [centerX, centerY, width, height, generateRelativeLine]);
+  
+  const stingerPoints = useMemo(() => 
+    generateRelativeLine(
+      centerX, centerY,
+      0, height/2,
+      0, height/1.3
+    ),
+  [centerX, centerY, height, generateRelativeLine]);
   
   return (
     <Group>
@@ -66,20 +91,12 @@ const PlayerRenderer: React.FC<PlayerRendererProps> = ({ playerData }) => {
       
       {/* Bee stripes */}
       <Line
-        points={generateRelativeLine(
-          centerX, centerY,
-          -width/2, -height/5,
-          width/2, -height/5
-        )}
+        points={topStripePoints}
         stroke="#000000"
         strokeWidth={4}
       />
       <Line
-        points={generateRelativeLine(
-          centerX, centerY,
-          -width/2, height/8,
-          width/2, height/8
-        )}
+        points={middleStripePoints}
         stroke="#000000"
         strokeWidth={4}
       />
@@ -100,11 +117,7 @@ const PlayerRenderer: React.FC<PlayerRendererProps> = ({ playerData }) => {
       
       {/* Stinger */}
       <Line
-        points={generateRelativeLine(
-          centerX, centerY,
-          0, height/2,
-          0, height/1.3
-        )}
+        points={stingerPoints}
         stroke="#000000"
         strokeWidth={2}
         lineCap="round"
@@ -123,6 +136,6 @@ const PlayerRenderer: React.FC<PlayerRendererProps> = ({ playerData }) => {
       )}
     </Group>
   );
-};
+});
 
 export default PlayerRenderer; 

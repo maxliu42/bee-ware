@@ -1,28 +1,56 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage } from 'react-konva';
-import Player from './Player';
-import Enemy from './Enemy';
-import Projectiles from './game/Projectiles';
-import GameOver from './ui/GameOver';
-import Score from './ui/Score';
-import LevelUp from './ui/LevelUp';
+import React, { useState, useEffect, useCallback, memo } from 'react';
+import { Stage, Layer, Image as KonvaImage, Text } from 'react-konva';
 import { useImage } from 'react-konva-utils';
-import { STAGE_WIDTH, STAGE_HEIGHT, PROJECTILE_DAMAGE } from '../game/constants';
-
-// Import our custom hooks
-import { useKeyboardControls } from './game/useKeyboardControls';
-import { usePlayerSystem } from './game/usePlayerSystem';
-import { useEnemySystem } from './game/useEnemySystem';
-import { useProjectileSystem } from './game/useProjectileSystem';
-import { useCollisionSystem } from './game/useCollisionSystem';
-import { useGameLoop } from './game/useGameLoop';
-import { useLevelSystem } from './game/useLevelSystem';
+import { STAGE_WIDTH, STAGE_HEIGHT } from '../game/constants';
+import { useECS } from '../game/ecs/hooks/useECS';
+import { GameStateSystem } from '../game/ecs/systems/GameStateSystem';
+import EntityRenderer from './ecs/EntityRenderer';
+import LoadingScreen from './ecs/LoadingScreen';
+import Score from './ui/Score';
+import GameOver from './ui/GameOver';
+import LevelUp from './ui/LevelUp';
 
 // Import background image
 import bgImage from '../assets/images/bg.png';
 
+interface Upgrade {
+  id: string;
+  name: string;
+  description: string;
+  apply: () => void;
+}
+
+// Memoized background image to prevent re-rendering
+const Background = memo(({ image }: { image: HTMLImageElement }) => (
+  <KonvaImage
+    image={image}
+    width={STAGE_WIDTH}
+    height={STAGE_HEIGHT}
+  />
+));
+
+// Memoized debug info to prevent re-rendering
+const DebugInfo = memo(({ entityCount, fps }: { entityCount: Record<string, number>, fps: number }) => (
+  <>
+    <Text
+      text={`FPS: ${fps}`}
+      x={10}
+      y={10}
+      fontSize={14}
+      fill="white"
+    />
+    <Text
+      text={`Entities: Total: ${entityCount.total} | Players: ${entityCount.players} | Enemies: ${entityCount.enemies} | Projectiles: ${entityCount.projectiles}`}
+      x={10}
+      y={30}
+      fontSize={14}
+      fill="white"
+    />
+  </>
+));
+
 /**
- * Main Game component that will contain the game canvas and logic
+ * ECS-based Game component
  */
 const Game: React.FC = () => {
   // Load assets
@@ -30,57 +58,96 @@ const Game: React.FC = () => {
   
   // Game state
   const [isPaused, setIsPaused] = useState(false);
-  
-  // Set up input handling
-  const keys = useKeyboardControls();
-  
-  // Set up player system
-  const {
-    playerPos,
-    playerHealth,
-    playerPosRef,
-    updatePosition,
-    damagePlayer,
-    isGameOver,
-    upgradeSpeed
-  } = usePlayerSystem(keys);
-  
-  // Set up projectile system
-  const {
-    projectiles,
-    updateProjectiles,
-    handleProjectileHit
-  } = useProjectileSystem(playerPosRef, isGameOver, isPaused);
-  
-  // Callbacks for upgrading game stats
-  const upgradeAttackSpeed = useCallback(() => {
-    console.log('Upgrading attack speed');
-    // In a real implementation, we would modify an attack speed value
-  }, []);
-  
-  // Set up enemy system
-  const {
-    enemies,
-    updateEnemies,
-    damageEnemy,
-    score
-  } = useEnemySystem(playerPosRef, isGameOver, isPaused);
-  
-  // Set up level system
-  const {
-    showLevelUp,
-    upgrades,
-    handleSelectUpgrade
-  } = useLevelSystem({
-    score, // Use the actual score from the enemy system
-    onUpgradeAttackSpeed: upgradeAttackSpeed,
-    onUpgradePlayerSpeed: upgradeSpeed
+  // Debug state - only update occasionally to reduce re-renders
+  const [entityCount, setEntityCount] = useState<Record<string, number>>({
+    total: 0,
+    players: 0,
+    enemies: 0,
+    projectiles: 0,
   });
   
-  // Update level system with the current score
+  // Whether to show performance metrics (FPS, entity count)
+  const [showPerformanceMetrics, setShowPerformanceMetrics] = useState(true);
+  
+  // Track the last time we updated the entity count
+  const lastDebugUpdateRef = React.useRef<number>(0);
+  
+  // Sample upgrades
+  const upgrades: Upgrade[] = [
+    {
+      id: 'speed',
+      name: 'Speed Boost',
+      description: 'Increase movement speed',
+      apply: () => {} // Will be implemented with actual functionality
+    },
+    {
+      id: 'attack',
+      name: 'Attack Speed',
+      description: 'Increase attack rate',
+      apply: () => {} // Will be implemented with actual functionality
+    },
+    {
+      id: 'damage',
+      name: 'Damage Boost',
+      description: 'Increase projectile damage',
+      apply: () => {} // Will be implemented with actual functionality
+    }
+  ];
+  
+  // Initialize ECS
+  const {
+    categorizedRenderData,
+    score,
+    isGameOver,
+    showLevelUp,
+    isInitialized,
+    world,
+    fps
+  } = useECS(isPaused);
+  
+  // Toggle performance metrics on pressing F key
   useEffect(() => {
-    // We can't directly update the score in the level system,
-    // so we'll need to monitor showLevelUp and pause when needed
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'f' || e.key === 'F') {
+        setShowPerformanceMetrics(prev => !prev);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+  
+  // Memoized function to update entity counts for debugging - throttled to reduce performance impact
+  const updateEntityCount = useCallback(() => {
+    if (world && isInitialized) {
+      const currentTime = performance.now();
+      
+      // Only update debug info every 500ms to reduce performance impact
+      if (currentTime - lastDebugUpdateRef.current > 500) {
+        const entityManager = world.getEntityManager();
+        setEntityCount({
+          total: entityManager.getEntityCount(),
+          players: categorizedRenderData.players.length,
+          enemies: categorizedRenderData.enemies.length,
+          projectiles: categorizedRenderData.projectiles.length,
+        });
+        
+        lastDebugUpdateRef.current = currentTime;
+      }
+    }
+  }, [world, isInitialized, categorizedRenderData]);
+  
+  // Update entity counts for debugging - less frequently
+  useEffect(() => {
+    if (showPerformanceMetrics) {
+      updateEntityCount();
+    }
+  }, [updateEntityCount, showPerformanceMetrics]);
+  
+  // Update pause state based on level up
+  useEffect(() => {
     if (showLevelUp) {
       setIsPaused(true);
     } else {
@@ -88,63 +155,36 @@ const Game: React.FC = () => {
     }
   }, [showLevelUp]);
   
-  // Set up collision detection
-  const { checkCollisions } = useCollisionSystem({
-    playerPosX: playerPos.x,
-    playerPosY: playerPos.y,
-    enemies,
-    projectiles,
-    damagePlayer,
-    damageEnemy,
-    handleProjectileHit,
-    projectileDamage: PROJECTILE_DAMAGE
-  });
+  // Handle upgrade selection
+  const handleSelectUpgrade = useCallback((upgrade: Upgrade) => {
+    upgrade.apply();
+    
+    // Update game state through the system
+    if (world) {
+      const gameStateSystem = world.getSystem(GameStateSystem);
+      if (gameStateSystem) {
+        gameStateSystem.setShowLevelUp(false);
+      }
+    }
+  }, [world]);
   
-  // Define update functions based on pause state
-  const updateFunctions = isPaused 
-    ? [] // Empty array when paused - no updates
-    : [
-        updatePosition,
-        updateEnemies,
-        updateProjectiles,
-        checkCollisions
-      ];
-  
-  // Set up the game loop
-  useGameLoop(updateFunctions, isPaused);
+  // Show loading screen if ECS is not initialized
+  if (!isInitialized) {
+    return <LoadingScreen />;
+  }
   
   return (
     <div className="game-container">
       <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
         <Layer>
           {/* Background image */}
-          {bgLoaded && (
-            <KonvaImage
-              image={bgLoaded}
-              width={STAGE_WIDTH}
-              height={STAGE_HEIGHT}
-            />
-          )}
+          {bgLoaded && <Background image={bgLoaded} />}
           
-          {/* Player */}
-          <Player 
-            x={playerPos.x} 
-            y={playerPos.y} 
-            health={playerHealth} 
-          />
+          {/* Performance metrics - toggle with F key */}
+          {showPerformanceMetrics && <DebugInfo entityCount={entityCount} fps={fps} />}
           
-          {/* Enemies */}
-          {enemies.map(enemy => (
-            <Enemy
-              key={enemy.id}
-              x={enemy.x}
-              y={enemy.y}
-              health={enemy.health}
-            />
-          ))}
-          
-          {/* Projectiles */}
-          <Projectiles projectiles={projectiles} />
+          {/* Render ECS entities */}
+          <EntityRenderer renderData={categorizedRenderData} />
           
           {/* UI Elements */}
           <Score score={score} />

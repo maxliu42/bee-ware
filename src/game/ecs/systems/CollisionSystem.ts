@@ -32,7 +32,7 @@ export class CollisionSystem extends BaseSystem {
   /**
    * Update collision detection
    */
-  public update(entities: Entity[], deltaTime: number): void {
+  public update(entities: Entity[], _deltaTime: number): void {
     if (!this.world) return;
     
     // Collect all collision events
@@ -110,13 +110,14 @@ export class CollisionSystem extends BaseSystem {
   private handlePlayerEnemyCollision(
     entityA: Entity,
     entityB: Entity,
-    colliderA: ColliderComponent,
-    colliderB: ColliderComponent
+    _colliderA: ColliderComponent,
+    _colliderB: ColliderComponent
   ): void {
-    // Determine which entity is the player and which is the enemy
-    const [playerEntity, enemyEntity] = 
-      colliderA.colliderType === ColliderType.PLAYER 
-        ? [entityA, entityB] 
+    // Find which entity is the player and which is the enemy
+    const [playerEntity, _enemyEntity] =
+      entityA.hasComponent(ComponentTypes.TAG) && 
+      entityA.getComponent<TagComponent>(ComponentTypes.TAG)?.tag === EntityTags.PLAYER
+        ? [entityA, entityB]
         : [entityB, entityA];
     
     // Get health components
@@ -134,14 +135,15 @@ export class CollisionSystem extends BaseSystem {
   private handleProjectileEnemyCollision(
     entityA: Entity,
     entityB: Entity,
-    colliderA: ColliderComponent,
-    colliderB: ColliderComponent
+    _colliderA: ColliderComponent,
+    _colliderB: ColliderComponent
   ): void {
     if (!this.world) return;
     
     // Determine which entity is the projectile and which is the enemy
     const [projectileEntity, enemyEntity] = 
-      colliderA.colliderType === ColliderType.PROJECTILE 
+      entityA.hasComponent(ComponentTypes.COLLIDER) && 
+      entityA.getComponent<ColliderComponent>(ComponentTypes.COLLIDER)?.colliderType === ColliderType.PROJECTILE 
         ? [entityA, entityB] 
         : [entityB, entityA];
     
@@ -152,18 +154,20 @@ export class CollisionSystem extends BaseSystem {
     if (!projectileComponent || !enemyHealth) return;
     
     // Apply damage to enemy
-    const damage = applyDamage(enemyHealth, projectileComponent.damage);
-    
-    // Check if enemy died
-    if (isDead(enemyHealth)) {
-      // Mark enemy for removal
-      this.world.removeEntity(enemyEntity.getId());
+    if (enemyHealth) {
+      applyDamage(enemyHealth, projectileComponent.damage);
       
-      // Add score using the ScoreSystem
-      if (this.world) {
-        const scoreSystem = this.world.getSystem(ScoreSystem);
-        if (scoreSystem) {
-          scoreSystem.incrementScore();
+      // Check if enemy died
+      if (isDead(enemyHealth)) {
+        // Mark enemy for removal
+        this.world.removeEntity(enemyEntity.getId());
+        
+        // Add score using the ScoreSystem
+        if (this.world) {
+          const scoreSystem = this.world.getSystem(ScoreSystem);
+          if (scoreSystem) {
+            scoreSystem.incrementScore();
+          }
         }
       }
     }

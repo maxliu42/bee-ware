@@ -41,6 +41,15 @@ export class Entity {
   }
 
   /**
+   * Remove all components from this entity
+   * Used when recycling entities in the object pool
+   */
+  public removeAllComponents(): this {
+    this.components.clear();
+    return this;
+  }
+
+  /**
    * Check if the entity has a specific component
    * @param componentType The type/key of the component to check
    */

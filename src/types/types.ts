@@ -13,31 +13,6 @@ export interface Direction {
   directionY: number;
 }
 
-// Base type for entities with health
-export interface EntityProps extends Position {
-  health: number;
-}
-
-// Game entity with ID type
-export interface GameEntity extends Position {
-  id: number;
-}
-
-// Game entity types
-export interface Enemy extends GameEntity {
-  health: number;
-}
-
-export interface Projectile extends GameEntity {
-  directionX: number;
-  directionY: number;
-  pierceLeft: number;
-}
-
-// Component props types
-export type PlayerProps = EntityProps;
-export type EnemyProps = EntityProps;
-
 // UI props types
 export interface GameOverProps {
   visible: boolean;

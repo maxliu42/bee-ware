@@ -1,19 +1,36 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { World } from '../core/World';
-import { EntityFactory } from '../factories/EntityFactory';
 import { 
   InputSystem, 
   MovementSystem, 
   RenderSystem, 
-  RenderData,
+  CategorizedRenderData,
   AISystem,
-  SpawnSystem,
   CollisionSystem,
   ProjectileSystem,
   ScoreSystem,
-  GameStateSystem
+  GameStateSystem,
+  PlayerSystem,
+  SpawnSystem
 } from '../systems';
-import { ATTACK_RATE } from '../../constants';
+import {
+  MAX_DELTA_TIME,
+  TIME_SCALE
+} from '../../constants';
+
+// Define a type for the systems reference
+type SystemsRef = {
+  input: InputSystem | null;
+  movement: MovementSystem | null;
+  render: RenderSystem | null;
+  ai: AISystem | null;
+  collision: CollisionSystem | null;
+  projectile: ProjectileSystem | null;
+  score: ScoreSystem | null;
+  gameState: GameStateSystem | null;
+  player: PlayerSystem | null;
+  spawn: SpawnSystem | null;
+};
 
 /**
  * Custom hook for integrating the ECS with React components
@@ -21,39 +38,59 @@ import { ATTACK_RATE } from '../../constants';
 export const useECS = (isPaused: boolean = false) => {
   // Create world and systems
   const worldRef = useRef<World | null>(null);
-  const factoryRef = useRef<EntityFactory | null>(null);
-  const systemsRef = useRef({
-    input: null as InputSystem | null,
-    movement: null as MovementSystem | null,
-    render: null as RenderSystem | null,
-    ai: null as AISystem | null,
-    spawn: null as SpawnSystem | null,
-    collision: null as CollisionSystem | null,
-    projectile: null as ProjectileSystem | null,
-    score: null as ScoreSystem | null,
-    gameState: null as GameStateSystem | null
+  const systemsRef = useRef<SystemsRef>({
+    input: null,
+    movement: null,
+    render: null,
+    ai: null,
+    collision: null,
+    projectile: null,
+    score: null,
+    gameState: null,
+    player: null,
+    spawn: null
   });
   
-  // State to track render data
-  const [renderData, setRenderData] = useState<RenderData[]>([]);
+  // Time accumulation for fixed time step - but using simpler approach for now
+  const lastTimeRef = useRef<number>(0);
+  
+  // State to track render data - use a ref for performance
+  const renderDataRef = useRef<CategorizedRenderData>({
+    players: [],
+    enemies: [],
+    projectiles: [],
+    other: []
+  });
+  
+  // Actual state for React rendering - updated less frequently
+  const [categorizedRenderData, setCategorizedRenderData] = useState<CategorizedRenderData>(renderDataRef.current);
   
   // State to track if systems are initialized
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Track the last time we updated the UI (for throttling)
+  const lastRenderTimeRef = useRef<number>(0);
+  
+  // Track the actual FPS
+  const fpsRef = useRef<number>(0);
+  const frameCountRef = useRef<number>(0);
+  const lastFpsUpdateTimeRef = useRef<number>(0);
+  
+  // Game state
+  const [score, setScore] = useState(0);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
   
   // Set up the ECS world and systems
   useEffect(() => {
     // Only initialize once
     if (isInitialized) return;
-
-    console.log('Initializing ECS...');
+    
+    console.log('Initializing ECS systems');
     
     // Create a new world
     const world = new World();
     worldRef.current = world;
-    
-    // Create entity factory
-    const factory = new EntityFactory(world);
-    factoryRef.current = factory;
     
     // Create and add systems
     const inputSystem = new InputSystem();
@@ -61,19 +98,21 @@ export const useECS = (isPaused: boolean = false) => {
     const renderSystem = new RenderSystem();
     const aiSystem = new AISystem();
     const collisionSystem = new CollisionSystem();
-    const projectileSystem = new ProjectileSystem(factory);
-    const spawnSystem = new SpawnSystem(factory);
+    const projectileSystem = new ProjectileSystem();
     const scoreSystem = new ScoreSystem();
     const gameStateSystem = new GameStateSystem();
+    const playerSystem = new PlayerSystem();
+    const spawnSystem = new SpawnSystem();
     
-    // Add systems to the world
-    world.addSystem(gameStateSystem); // Add first (highest priority)
+    // Add systems to the world in priority order
+    world.addSystem(gameStateSystem);
     world.addSystem(scoreSystem);
+    world.addSystem(playerSystem);
     world.addSystem(inputSystem);
     world.addSystem(movementSystem);
     world.addSystem(aiSystem);
-    world.addSystem(projectileSystem);
     world.addSystem(spawnSystem);
+    world.addSystem(projectileSystem);
     world.addSystem(collisionSystem);
     world.addSystem(renderSystem);
     
@@ -83,38 +122,39 @@ export const useECS = (isPaused: boolean = false) => {
       movement: movementSystem,
       render: renderSystem,
       ai: aiSystem,
-      spawn: spawnSystem,
       collision: collisionSystem,
       projectile: projectileSystem,
       score: scoreSystem,
-      gameState: gameStateSystem
+      gameState: gameStateSystem,
+      player: playerSystem,
+      spawn: spawnSystem
     };
     
-    // Initialize systems
-    inputSystem.initialize();
-    spawnSystem.initialize();
-    scoreSystem.initialize();
-    gameStateSystem.initialize();
+    // Initialize all systems
+    Object.values(systemsRef.current).forEach(system => {
+      if (system) {
+        system.initialize();
+      }
+    });
     
-    // Create player entity
-    const player = factory.createPlayer();
-    
-    // Add weapon timer to player
-    projectileSystem.addWeaponTimer(player, ATTACK_RATE / 1000); // Convert ms to seconds
+    // Reset time trackers
+    lastTimeRef.current = performance.now();
+    lastRenderTimeRef.current = performance.now();
+    lastFpsUpdateTimeRef.current = performance.now();
+    frameCountRef.current = 0;
     
     // Mark as initialized
     setIsInitialized(true);
+    console.log('ECS systems initialized');
     
     // Cleanup function
     return () => {
-      // Clean up systems
-      if (systemsRef.current.input) {
-        systemsRef.current.input.cleanup();
-      }
-      
-      if (systemsRef.current.spawn) {
-        systemsRef.current.spawn.cleanup();
-      }
+      // Clean up all systems
+      Object.values(systemsRef.current).forEach(system => {
+        if (system) {
+          system.cleanup();
+        }
+      });
       
       // Reset the world
       if (worldRef.current) {
@@ -123,61 +163,124 @@ export const useECS = (isPaused: boolean = false) => {
     };
   }, [isInitialized]);
   
-  // Update the world each frame
+  // Memoized state update function for better performance
+  const updateGameState = useCallback(() => {
+    if (!systemsRef.current.score || !systemsRef.current.gameState) {
+      return;
+    }
+    
+    // Only update state if there's a change to reduce React renders
+    const currentScore = systemsRef.current.score.getScore();
+    if (currentScore !== score) {
+      setScore(currentScore);
+    }
+    
+    const currentGameOver = systemsRef.current.gameState.isGameOver();
+    if (currentGameOver !== isGameOver) {
+      setIsGameOver(currentGameOver);
+    }
+    
+    const currentShowLevelUp = systemsRef.current.gameState.isShowingLevelUp();
+    if (currentShowLevelUp !== showLevelUp) {
+      setShowLevelUp(currentShowLevelUp);
+    }
+  }, [score, isGameOver, showLevelUp]);
+  
+  // Calculate and update FPS - simplified for reliability
+  const updateFPS = useCallback((currentTime: number) => {
+    frameCountRef.current += 1;
+    const elapsed = currentTime - lastFpsUpdateTimeRef.current;
+    
+    // Update FPS counter once per second
+    if (elapsed >= 1000) {
+      const newFps = Math.round((frameCountRef.current * 1000) / elapsed);
+      fpsRef.current = newFps;
+      lastFpsUpdateTimeRef.current = currentTime;
+      frameCountRef.current = 0;
+      
+      // Log FPS for debugging
+      console.log(`FPS: ${newFps}`);
+    }
+  }, []);
+  
+  // Update the world each frame - using simplified time step for reliability
   useEffect(() => {
     if (!isInitialized || !worldRef.current) return;
+    
+    console.log('Starting game loop');
     
     // Set pause state via GameStateSystem
     if (systemsRef.current.gameState) {
       systemsRef.current.gameState.setPaused(isPaused);
     }
     
-    let lastTime = performance.now();
     let frameId: number;
     
-    // Game loop function
+    // Simplified game loop function - easier to debug
     const gameLoop = () => {
       const currentTime = performance.now();
-      const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
-      lastTime = currentTime;
       
-      // Update the world
-      if (worldRef.current) {
-        worldRef.current.update(deltaTime);
+      // Calculate actual delta time since last frame
+      const deltaTimeMs = currentTime - lastTimeRef.current;
+      const deltaTime = Math.min(deltaTimeMs / 1000, MAX_DELTA_TIME); // Convert to seconds and cap
+      
+      // Update FPS counter
+      updateFPS(currentTime);
+      
+      // Update the game world with the current delta time
+      if (!isPaused && worldRef.current) {
+        try {
+          // Directly update with current delta time - simpler approach
+          worldRef.current.update(deltaTime * TIME_SCALE);
+        } catch (error) {
+          console.error('Error in game loop update:', error);
+        }
       }
       
-      // Get render data for React components
-      if (systemsRef.current.render) {
-        const newRenderData = systemsRef.current.render.getAllRenderData();
-        setRenderData(newRenderData);
+      // Update render data at a throttled rate for better performance
+      if (currentTime - lastRenderTimeRef.current > 50) { // update UI at ~20fps
+        if (systemsRef.current.render) {
+          try {
+            // Get render data and update React state
+            renderDataRef.current = systemsRef.current.render.getCategorizedRenderData();
+            setCategorizedRenderData({...renderDataRef.current});
+            
+            // Update game state for UI
+            updateGameState();
+          } catch (error) {
+            console.error('Error in render update:', error);
+          }
+          
+          // Update timestamp
+          lastRenderTimeRef.current = currentTime;
+        }
       }
       
-      // Schedule next frame
+      // Save current time for next frame's delta calculation
+      lastTimeRef.current = currentTime;
+      
+      // Request next frame
       frameId = requestAnimationFrame(gameLoop);
     };
     
     // Start the game loop
+    lastTimeRef.current = performance.now(); // Initialize time
     frameId = requestAnimationFrame(gameLoop);
     
     // Cleanup function
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [isInitialized, isPaused]);
+  }, [isInitialized, isPaused, updateGameState, updateFPS]);
   
-  // Get state from systems
-  const score = systemsRef.current.score?.getScore() || 0;
-  const isGameOver = systemsRef.current.gameState?.isGameOver() || false;
-  const showLevelUp = systemsRef.current.gameState?.isShowingLevelUp() || false;
-  
-  // Provide factory and render data to consumers
+  // Provide world, render data, and game state to consumers
   return {
     world: worldRef.current,
-    factory: factoryRef.current,
-    renderData,
+    categorizedRenderData,
     score,
     isGameOver,
     showLevelUp,
     isInitialized,
+    fps: fpsRef.current
   };
 }; 

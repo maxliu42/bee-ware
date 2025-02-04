@@ -34,4 +34,19 @@
   0% { opacity: 0.6; }
   50% { opacity: 0.9; }
   100% { opacity: 0.6; }
+}
+
+/* Orb styling */
+.orb {
+  position: absolute;
+  left: var(--left);
+  top: var(--top);
+  width: var(--width);
+  height: var(--height);
+  background: radial-gradient(circle, var(--color) 0%, transparent 70%);
+  animation: var(--animation), orb-pulse 8s infinite alternate ease-in-out;
+  animation-delay: var(--animation-delay), var(--pulse-delay);
+  border-radius: 50%;
+  opacity: 0.8;
+  pointer-events: none;
 } 

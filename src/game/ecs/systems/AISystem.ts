@@ -5,7 +5,6 @@ import { TransformComponent, getTransformCenter } from '../components/TransformC
 import { VelocityComponent, setVelocityDirection } from '../components/VelocityComponent';
 import { TagComponent, EntityTags } from '../components/TagComponent';
 import { AIComponent, AIBehaviorType } from '../components/AIComponent';
-import { STAGE_WIDTH, STAGE_HEIGHT } from '../../constants';
 
 /**
  * AISystem - Controls enemy behavior based on AI components
@@ -69,7 +68,7 @@ export class AISystem extends BaseSystem {
    * Handle seek player behavior - move toward player position
    */
   private handleSeekPlayer(
-    entity: Entity,
+    _entity: Entity,
     transform: TransformComponent,
     velocity: VelocityComponent,
     playerCenter: { x: number, y: number }
@@ -90,10 +89,10 @@ export class AISystem extends BaseSystem {
    * (Basic implementation for now, can be expanded later)
    */
   private handlePatrol(
-    entity: Entity,
-    transform: TransformComponent,
+    _entity: Entity,
+    _transform: TransformComponent,
     velocity: VelocityComponent, 
-    deltaTime: number
+    _deltaTime: number
   ): void {
     // For simplicity, just make enemies move in a circular pattern for now
     const time = performance.now() / 1000;

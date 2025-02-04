@@ -8,4 +8,5 @@ export * from './SpawnSystem';
 export * from './CollisionSystem';
 export * from './ProjectileSystem';
 export * from './ScoreSystem';
-export * from './GameStateSystem'; 
+export * from './GameStateSystem';
+export * from './PlayerSystem'; 

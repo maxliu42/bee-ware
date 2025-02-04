@@ -1,50 +1,46 @@
 import { Entity } from './Entity';
 import { ComponentType } from './Component';
+import { EntityPool } from './EntityPool';
 
 /**
  * EntityManager - Manages the creation, tracking, and destruction of entities
  * Provides methods to query entities with specific components
+ * Uses an EntityPool for efficient entity recycling
  */
 export class EntityManager {
-  private entities: Map<number, Entity> = new Map();
+  private entityPool: EntityPool;
   private entitiesToAdd: Entity[] = [];
   private entitiesToRemove: number[] = [];
   private isDeferringOperations: boolean = false;
 
   /**
-   * Create a new entity
+   * Create a new entity manager with an optional entity pool configuration
+   */
+  constructor(initialPoolSize: number = 50, maxPoolSize: number = 1000) {
+    this.entityPool = new EntityPool(initialPoolSize, maxPoolSize);
+  }
+
+  /**
+   * Create a new entity from the pool
    */
   public createEntity(): Entity {
-    const entity = new Entity();
+    const entity = this.entityPool.acquire();
     
     if (this.isDeferringOperations) {
       this.entitiesToAdd.push(entity);
-    } else {
-      this.addEntityImmediate(entity);
     }
     
     return entity;
   }
 
   /**
-   * Add an existing entity to the manager
-   */
-  public addEntity(entity: Entity): void {
-    if (this.isDeferringOperations) {
-      this.entitiesToAdd.push(entity);
-    } else {
-      this.addEntityImmediate(entity);
-    }
-  }
-
-  /**
-   * Remove an entity by ID
+   * Remove an entity by ID and return it to the pool
    */
   public removeEntity(entityId: number): void {
     if (this.isDeferringOperations) {
       this.entitiesToRemove.push(entityId);
     } else {
-      this.removeEntityImmediate(entityId);
+      this.entityPool.release(entityId);
     }
   }
 
@@ -52,23 +48,21 @@ export class EntityManager {
    * Get an entity by ID
    */
   public getEntity(entityId: number): Entity | undefined {
-    return this.entities.get(entityId);
+    return this.entityPool.getEntity(entityId);
   }
 
   /**
-   * Get all entities currently managed
+   * Get all entities currently active
    */
   public getAllEntities(): Entity[] {
-    return Array.from(this.entities.values());
+    return this.entityPool.getAllEntities();
   }
 
   /**
    * Get entities that have all the specified component types
    */
   public getEntitiesWithComponents(componentTypes: ComponentType[]): Entity[] {
-    return this.getAllEntities().filter(entity => 
-      componentTypes.every(type => entity.hasComponent(type))
-    );
+    return this.entityPool.getEntitiesWithComponents(componentTypes);
   }
 
   /**
@@ -84,14 +78,11 @@ export class EntityManager {
    */
   public processDeferredOperations(): void {
     // Add new entities
-    this.entitiesToAdd.forEach(entity => {
-      this.addEntityImmediate(entity);
-    });
     this.entitiesToAdd = [];
 
     // Remove entities marked for removal
     this.entitiesToRemove.forEach(entityId => {
-      this.removeEntityImmediate(entityId);
+      this.entityPool.release(entityId);
     });
     this.entitiesToRemove = [];
 
@@ -102,29 +93,22 @@ export class EntityManager {
    * Clear all entities
    */
   public clear(): void {
-    this.entities.clear();
+    this.entityPool.releaseAll();
     this.entitiesToAdd = [];
     this.entitiesToRemove = [];
   }
 
   /**
-   * Get the count of entities
+   * Get the count of active entities
    */
   public getEntityCount(): number {
-    return this.entities.size;
+    return this.entityPool.getActiveCount();
   }
 
   /**
-   * Internal method to add an entity immediately
+   * Get the count of available entities in the pool
    */
-  private addEntityImmediate(entity: Entity): void {
-    this.entities.set(entity.getId(), entity);
-  }
-
-  /**
-   * Internal method to remove an entity immediately
-   */
-  private removeEntityImmediate(entityId: number): void {
-    this.entities.delete(entityId);
+  public getAvailableEntityCount(): number {
+    return this.entityPool.getAvailableCount();
   }
 } 

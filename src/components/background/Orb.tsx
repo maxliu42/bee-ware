@@ -19,19 +19,17 @@ const Orb: React.FC<OrbProps> = ({
   animationDelay,
   color
 }) => {
-  const style: React.CSSProperties = {
-    position: 'absolute',
-    left,
-    top,
-    width,
-    height,
-    background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
-    animation: `${animation}, orb-pulse 8s infinite alternate ease-in-out`,
-    animationDelay: `${animationDelay}, ${parseInt(animationDelay)}s`,
-    borderRadius: '50%',
-    opacity: 0.8,
-    pointerEvents: 'none',
-  };
+  // Use CSS custom properties for dynamic values
+  const style = {
+    '--left': left,
+    '--top': top,
+    '--width': width,
+    '--height': height,
+    '--animation': animation,
+    '--animation-delay': animationDelay,
+    '--color': color,
+    '--pulse-delay': `${parseInt(animationDelay)}s`
+  } as React.CSSProperties;
 
   return <div className="orb" style={style} />;
 };

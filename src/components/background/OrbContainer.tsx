@@ -1,7 +1,6 @@
 import React from 'react';
 import Orb from './Orb';
 
-// Define the orb colors
 const orbColors = [
   'rgba(255, 180, 0, 0.8)',    // Golden yellow
   'rgba(180, 80, 0, 0.8)',      // Deep amber
@@ -13,7 +12,6 @@ const orbColors = [
   'rgba(220, 150, 40, 0.7)'     // Light amber
 ];
 
-// Define the orb configurations
 const orbConfigs = [
   { left: '20%', top: '30%', width: '300px', height: '300px', animation: 'orb-float-1 40s infinite ease-in-out', animationDelay: '0s', color: orbColors[0] },
   { left: '80%', top: '70%', width: '350px', height: '350px', animation: 'orb-float-2 50s infinite ease-in-out', animationDelay: '5s', color: orbColors[1] },
@@ -27,7 +25,7 @@ const orbConfigs = [
 
 const OrbContainer: React.FC = () => {
   return (
-    <div className="orb-container" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+    <div className="orb-container">
       {orbConfigs.map((config, index) => (
         <Orb
           key={index}

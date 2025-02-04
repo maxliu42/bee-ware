@@ -12,6 +12,10 @@ export interface System {
    */
   init(world: World): void;
   
+  initialize(): void;
+  
+  cleanup(): void;
+  
   /**
    * Update method called each frame
    * @param entities The entities to process
@@ -53,6 +57,22 @@ export abstract class BaseSystem implements System {
    */
   public init(world: World): void {
     this.world = world;
+  }
+  
+  /**
+   * Default initialize implementation
+   * Systems should override this if they need to initialize resources
+   */
+  public initialize(): void {
+    // Default implementation does nothing
+  }
+  
+  /**
+   * Default cleanup implementation
+   * Systems should override this if they need to clean up resources
+   */
+  public cleanup(): void {
+    // Default implementation does nothing
   }
 
   /**

@@ -1,6 +1,5 @@
-import { Entity } from '../core/Entity';
 import { BaseSystem } from '../core/System';
-import { ComponentType } from '../core/Component';
+import { Entity } from '../core/Entity';
 
 /**
  * System for managing the game score.

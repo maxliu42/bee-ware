@@ -1,6 +1,5 @@
 import { Entity } from '../core/Entity';
 import { BaseSystem } from '../core/System';
-import { ComponentType } from '../core/Component';
 import {
   GAME_STATE_COMPONENT,
   GameStateComponent,
