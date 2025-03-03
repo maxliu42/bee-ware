@@ -2,9 +2,12 @@ import { BaseSystem } from '../core/System';
 import { Entity } from '../core/Entity';
 import { ComponentTypes } from '../core/Component';
 import { TransformComponent, getTransformCenter } from '../components/TransformComponent';
-import { VelocityComponent, setVelocityDirection } from '../components/VelocityComponent';
+import { VelocityComponent } from '../components/VelocityComponent';
 import { TagComponent, EntityTags } from '../components/TagComponent';
 import { AIComponent, AIBehaviorType } from '../components/AIComponent';
+import { setVelocityDirection } from '../../utils/PhysicsUtils';
+import { getEntityWithTag } from '../utils/EntityUtils';
+import { Logger } from '../../utils/LogUtils';
 
 /**
  * AISystem - Controls enemy behavior based on AI components
@@ -19,20 +22,17 @@ export class AISystem extends BaseSystem {
    * Update AI-controlled entities
    */
   public update(entities: Entity[], deltaTime: number): void {
+    if (!this.world) return;
+    
     // Find player entity for targeting
-    const playerEntities = this.world?.getEntitiesWithComponents([
-      ComponentTypes.TAG,
-      ComponentTypes.TRANSFORM
-    ]).filter((entity: Entity) => {
-      const tag = entity.getComponent<TagComponent>(ComponentTypes.TAG);
-      return tag?.tag === EntityTags.PLAYER;
-    }) || [];
-
+    const playerEntity = getEntityWithTag(
+      this.world.getEntitiesWithComponents([ComponentTypes.TAG, ComponentTypes.TRANSFORM]), 
+      EntityTags.PLAYER
+    );
+    
     // If no player is found, AI can't target
-    if (playerEntities.length === 0) return;
-
-    // Get the first player found
-    const playerEntity = playerEntities[0];
+    if (!playerEntity) return;
+    
     const playerTransform = playerEntity.getComponent<TransformComponent>(ComponentTypes.TRANSFORM);
     if (!playerTransform) return;
 
@@ -50,10 +50,10 @@ export class AISystem extends BaseSystem {
       // Handle different AI behaviors
       switch (ai.behaviorType) {
         case AIBehaviorType.SEEK_PLAYER:
-          this.handleSeekPlayer(entity, transform, velocity, playerCenter);
+          this.handleSeekPlayer(transform, velocity, playerCenter);
           break;
         case AIBehaviorType.PATROL:
-          this.handlePatrol(entity, transform, velocity, deltaTime);
+          this.handlePatrol(velocity);
           break;
         case AIBehaviorType.IDLE:
           // Do nothing for idle entities
@@ -68,7 +68,6 @@ export class AISystem extends BaseSystem {
    * Handle seek player behavior - move toward player position
    */
   private handleSeekPlayer(
-    _entity: Entity,
     transform: TransformComponent,
     velocity: VelocityComponent,
     playerCenter: { x: number, y: number }
@@ -89,10 +88,7 @@ export class AISystem extends BaseSystem {
    * (Basic implementation for now, can be expanded later)
    */
   private handlePatrol(
-    _entity: Entity,
-    _transform: TransformComponent,
-    velocity: VelocityComponent, 
-    _deltaTime: number
+    velocity: VelocityComponent
   ): void {
     // For simplicity, just make enemies move in a circular pattern for now
     const time = performance.now() / 1000;

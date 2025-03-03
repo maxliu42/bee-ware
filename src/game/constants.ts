@@ -7,7 +7,7 @@ export const STAGE_WIDTH: number = 1024;
 export const STAGE_HEIGHT: number = 768;
 
 // Player settings
-export const PLAYER_SPEED: number = 1;
+export const PLAYER_SPEED: number = 3;
 export const PLAYER_INITIAL_HEALTH: number = 100;
 export const PLAYER_SIZE: number = 32;
 
@@ -31,7 +31,7 @@ export const PLAYER_Y: number = STAGE_HEIGHT / 2 - PLAYER_SIZE / 2;
 export const HEALTH_BAR_HEIGHT: number = 5;
 
 // Spawn system settings
-export const MAX_ENEMIES: number = 20;
+export const MAX_ENEMIES: number = 0; // Temporarily set to 0 to disable enemy spawning
 export const INITIAL_SPAWN_DELAY: number = 1.0;
 export const BASE_SPAWN_INTERVAL: number = 3.0;
 export const MIN_SPAWN_INTERVAL: number = 1.0;

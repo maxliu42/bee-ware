@@ -140,6 +140,10 @@ export class SpawnSystem extends BaseSystem {
    * Spawn a new enemy at a random position on the edge of the screen
    */
   private spawnEnemy(): void {
+    // TEMPORARILY DISABLED ENEMY SPAWNING FOR DEBUGGING
+    console.warn('SPAWN SYSTEM: Enemy spawning is disabled for debugging');
+    return;
+    
     if (!this.world) {
       console.error('SpawnSystem: Cannot spawn enemy, world is null');
       return;

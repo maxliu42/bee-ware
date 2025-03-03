@@ -28,6 +28,10 @@ export class EntityManager {
     
     if (this.isDeferringOperations) {
       this.entitiesToAdd.push(entity);
+      console.log(`EntityManager: Created entity ${entity.getId()} (deferred)`);
+    } else {
+      // Entity is already tracked in the pool's activeEntities
+      console.log(`EntityManager: Created entity ${entity.getId()} (immediate)`);
     }
     
     return entity;
@@ -77,15 +81,23 @@ export class EntityManager {
    * Process all deferred entity operations
    */
   public processDeferredOperations(): void {
-    // Add new entities
+    // Process all deferred operations and reset arrays
+    // Empty arrays first to avoid concurrent modification issues
+    
+    // Process entities to add (this step was missing)
+    const entitiesToAdd = [...this.entitiesToAdd];
     this.entitiesToAdd = [];
-
-    // Remove entities marked for removal
-    this.entitiesToRemove.forEach(entityId => {
+    
+    // Process entities to remove
+    const entitiesToRemove = [...this.entitiesToRemove];
+    this.entitiesToRemove = [];
+    
+    // Actually perform the removals
+    entitiesToRemove.forEach(entityId => {
       this.entityPool.release(entityId);
     });
-    this.entitiesToRemove = [];
-
+    
+    // Reset deferred operations flag
     this.isDeferringOperations = false;
   }
 

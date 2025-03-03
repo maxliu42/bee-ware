@@ -168,13 +168,53 @@ const Game: React.FC = () => {
     }
   }, [world]);
   
+  // Update the handleCanvasClick function to be more robust
+  const handleCanvasClick = () => {
+    console.warn('🎮 Game canvas clicked - ensuring focus for keyboard events');
+    // Force focus on the canvas element
+    if (document.activeElement && 'blur' in document.activeElement) {
+      (document.activeElement as HTMLElement).blur(); // Safely blur the active element
+    }
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer instanceof HTMLElement) {
+      gameContainer.focus();
+      console.warn('🎮 Game container focused!');
+    } else {
+      console.error('🎮 Could not find game container to focus!');
+    }
+  };
+  
+  // Add keyboard event handlers directly on the component
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Prevent browser shortcuts from interfering with game controls
+    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      console.warn(`🎮 GAME COMPONENT KEY DOWN: ${e.key}`);
+    }
+  };
+  
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    if (['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+      e.preventDefault();
+      console.warn(`🎮 GAME COMPONENT KEY UP: ${e.key}`);
+    }
+  };
+  
   // Show loading screen if ECS is not initialized
   if (!isInitialized) {
     return <LoadingScreen />;
   }
   
   return (
-    <div className="game-container">
+    <div 
+      className="game-container" 
+      tabIndex={0} 
+      onClick={handleCanvasClick}
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onFocus={() => console.warn('🎮 Game canvas focused - keyboard events should work now')}
+      style={{ outline: 'none' }} // Remove outline when focused
+    >
       <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
         <Layer>
           {/* Background image */}

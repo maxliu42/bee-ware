@@ -47,11 +47,17 @@ export function getInputDirection(input: InputComponent): [number, number] {
   if (input.left) directionX -= 1;
   if (input.right) directionX += 1;
   
+  // If any direction is active, log it with high visibility
+  if (directionX !== 0 || directionY !== 0) {
+    console.warn(`🎮 INPUT DIRECTION: Raw (${directionX}, ${directionY})`);
+  }
+  
   // If there's diagonal movement, normalize the vector
   if (directionX !== 0 && directionY !== 0) {
     const length = Math.sqrt(directionX * directionX + directionY * directionY);
     directionX /= length;
     directionY /= length;
+    console.warn(`🎮 INPUT DIRECTION: Normalized (${directionX.toFixed(2)}, ${directionY.toFixed(2)})`);
   }
   
   return [directionX, directionY];

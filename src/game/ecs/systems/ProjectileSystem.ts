@@ -44,6 +44,10 @@ export class ProjectileSystem extends BaseSystem {
    * Update the projectile system
    */
   public update(entities: Entity[], deltaTime: number): void {
+    // TEMPORARILY DISABLED PROJECTILE FIRING FOR DEBUGGING
+    console.warn('PROJECTILE SYSTEM: Projectile firing is disabled for debugging');
+    return;
+    
     for (const entity of entities) {
       const timer = entity.getComponent<TimerComponent>(ComponentTypes.TIMER);
       const transform = entity.getComponent<TransformComponent>(ComponentTypes.TRANSFORM);
@@ -90,6 +94,10 @@ export class ProjectileSystem extends BaseSystem {
    * Fire a projectile from an entity
    */
   private fireProjectile(entity: Entity): void {
+    // TEMPORARILY DISABLED PROJECTILE FIRING FOR DEBUGGING
+    console.warn('PROJECTILE SYSTEM: Projectile creation disabled for debugging');
+    return;
+    
     if (!this.world) return;
     
     const transform = entity.getComponent<TransformComponent>(ComponentTypes.TRANSFORM);
